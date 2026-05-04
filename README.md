@@ -9,6 +9,18 @@ A native macOS overlay for asking quick questions to a locally-running [Ollama](
 
 ## Install
 
+### Quick install (recommended)
+
+One command sets up Homebrew (if needed), installs Ollama, pulls the default model, and installs TinyQuestion to `/Applications`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/PhillipMogensen/TinyQuestion/main/scripts/install.sh | bash
+```
+
+The script is idempotent — re-run it any time to upgrade to the latest release. Inspect it first if you'd rather not pipe-curl-to-bash: [`scripts/install.sh`](scripts/install.sh).
+
+### Manual install
+
 1. Download the latest `TinyQuestion-X.Y.Z.dmg` from the [Releases page](https://github.com/PhillipMogensen/TinyQuestion/releases).
 2. Open the DMG and drag `TinyQuestion.app` to `/Applications`.
 3. **First launch** — because TinyQuestion is unsigned, macOS Gatekeeper will block it. There are two ways through:
@@ -23,7 +35,7 @@ A native macOS overlay for asking quick questions to a locally-running [Ollama](
 
    On macOS Sequoia (15) or later you may instead need to go to **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to the TinyQuestion entry.
 
-4. Grant accessibility permission if prompted (only required if a future version uses input monitoring; the current version does not).
+4. Make sure [Ollama](https://ollama.com) is running and you've pulled at least one model (`ollama pull phi4-mini` is a good first choice).
 
 ## Use
 
