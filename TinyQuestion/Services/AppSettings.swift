@@ -6,8 +6,11 @@ import Observation
 @Observable
 final class AppSettings {
     static let defaultSystemPrompt = """
-    You answer questions tersely. No preamble, no apologies, no restating the question. \
-    If the answer is a single word or phrase, just say it.
+    Match the length of your answer to what the question actually needs. \
+    Factual lookups get a single word or phrase. \
+    "How" and "why" questions get a short paragraph that actually explains the mechanism — \
+    not just the name of the concept. \
+    No preamble, no apologies, no restating the question.
     """
 
     static let defaultModel = "phi4-mini:latest"
