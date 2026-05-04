@@ -2,18 +2,40 @@ import AppKit
 import HotKey
 import SwiftUI
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: OverlayPanel?
     private var hotkeyManager: HotkeyManager?
+    private let conversation = Conversation()
+    private let settings = AppSettings()
+    private let client = OllamaClient()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let panel = OverlayPanel(rootView: OverlayView())
-        self.panel = panel
+        let view = OverlayView(
+            conversation: conversation,
+            settings: settings,
+            client: client,
+            onDismiss: { [weak self] in self?.dismiss() }
+        )
+        panel = OverlayPanel(rootView: view)
 
-        let manager = HotkeyManager { [weak self] in
-            self?.panel?.toggle()
-        }
+        let manager = HotkeyManager { [weak self] in self?.toggle() }
         manager.register(key: .j, modifiers: [.command, .option])
-        self.hotkeyManager = manager
+        hotkeyManager = manager
+    }
+
+    private func toggle() {
+        guard let panel else { return }
+        if panel.isVisible && panel.isKeyWindow {
+            dismiss()
+        } else {
+            panel.showCentered()
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    private func dismiss() {
+        conversation.clear()
+        panel?.orderOut(nil)
     }
 }

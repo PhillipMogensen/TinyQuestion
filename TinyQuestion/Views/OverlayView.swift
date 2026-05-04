@@ -1,27 +1,18 @@
 import SwiftUI
 
 struct OverlayView: View {
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("TinyQuestion")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 12)
+    @Bindable var conversation: Conversation
+    @Bindable var settings: AppSettings
+    let client: OllamaClient
+    var onDismiss: () -> Void
 
-            VStack(spacing: 8) {
-                Image(systemName: "questionmark.bubble")
-                    .font(.system(size: 32))
-                    .foregroundStyle(.secondary)
-                Text("Skeleton — phase 1")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+    var body: some View {
+        ConversationView(
+            conversation: conversation,
+            settings: settings,
+            client: client,
+            onDismiss: onDismiss
+        )
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
@@ -30,9 +21,4 @@ struct OverlayView: View {
         )
         .padding(8)
     }
-}
-
-#Preview {
-    OverlayView()
-        .frame(width: 560, height: 420)
 }
