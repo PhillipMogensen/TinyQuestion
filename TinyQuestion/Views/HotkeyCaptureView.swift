@@ -12,20 +12,53 @@ struct HotkeyCaptureView: View {
 
     var body: some View {
         Button(action: toggleCapture) {
-            HStack(spacing: 6) {
-                Image(systemName: capturing ? "record.circle" : "keyboard")
-                Text(capturing ? "Press a key combo… (Esc to cancel)" : currentLabel)
-                    .font(.system(size: 12, design: .monospaced))
+            HStack(spacing: 8) {
+                if capturing {
+                    HStack(spacing: 6) {
+                        Image(systemName: "record.circle")
+                            .font(.system(size: 11))
+                        Text("Press a key combo… (Esc to cancel)")
+                            .font(.system(size: 11))
+                    }
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.15))
+                    )
+                } else {
+                    chordChips
+                    Text("to toggle TinyQuestion")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.primary.opacity(capturing ? 0.18 : 0.08))
-            )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onDisappear { stopCapturing() }
+    }
+
+    private var chordChips: some View {
+        HStack(spacing: 4) {
+            ForEach(Self.chips(modifiers: settings.hotkeyModifiers, keyCode: settings.hotkeyKeyCode), id: \.self) { glyph in
+                Text(glyph)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 22, minHeight: 22)
+                    .padding(.horizontal, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(Color.primary.opacity(0.10))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .strokeBorder(.white.opacity(0.08), lineWidth: 1)
+                    )
+            }
+        }
     }
 
     private var currentLabel: String {
@@ -69,6 +102,17 @@ struct HotkeyCaptureView: View {
             monitor = nil
         }
         capturing = false
+    }
+
+    /// Render a hotkey as discrete chip strings, e.g. ["⌥", "⌘", "J"].
+    static func chips(modifiers: NSEvent.ModifierFlags, keyCode: UInt32) -> [String] {
+        var out: [String] = []
+        if modifiers.contains(.control) { out.append("⌃") }
+        if modifiers.contains(.option)  { out.append("⌥") }
+        if modifiers.contains(.shift)   { out.append("⇧") }
+        if modifiers.contains(.command) { out.append("⌘") }
+        out.append(keyName(for: keyCode))
+        return out.isEmpty ? ["?"] : out
     }
 
     /// Render a hotkey as a glyph string like "⌥⌘J".
