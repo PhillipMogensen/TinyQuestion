@@ -1,5 +1,6 @@
 import AppKit
 import HotKey
+import Observation
 import SwiftUI
 
 @MainActor
@@ -20,8 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel = OverlayPanel(rootView: view)
 
         let manager = HotkeyManager { [weak self] in self?.toggle() }
-        manager.register(key: .j, modifiers: [.command, .option])
+        manager.register(carbonKeyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers)
         hotkeyManager = manager
+
+        observeHotkeyChanges()
     }
 
     private func toggle() {
@@ -37,5 +40,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func dismiss() {
         conversation.clear()
         panel?.orderOut(nil)
+    }
+
+    /// Re-registers the global hotkey whenever the user changes it in settings.
+    /// Re-arms after each fire because withObservationTracking is one-shot.
+    private func observeHotkeyChanges() {
+        withObservationTracking {
+            _ = settings.hotkeyKeyCode
+            _ = settings.hotkeyModifiers
+        } onChange: {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.hotkeyManager?.register(
+                    carbonKeyCode: self.settings.hotkeyKeyCode,
+                    modifiers: self.settings.hotkeyModifiers
+                )
+                self.observeHotkeyChanges()
+            }
+        }
     }
 }

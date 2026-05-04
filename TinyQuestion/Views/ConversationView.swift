@@ -5,6 +5,7 @@ struct ConversationView: View {
     @Bindable var settings: AppSettings
     let client: OllamaClient
     var onDismiss: () -> Void
+    var onShowSettings: () -> Void
 
     @State private var input: String = ""
     @FocusState private var inputFocused: Bool
@@ -18,6 +19,13 @@ struct ConversationView: View {
         .onKeyPress(.escape) {
             onDismiss()
             return .handled
+        }
+        .onKeyPress(KeyEquivalent(","), phases: .down) { press in
+            if press.modifiers.contains(.command) {
+                onShowSettings()
+                return .handled
+            }
+            return .ignored
         }
     }
 

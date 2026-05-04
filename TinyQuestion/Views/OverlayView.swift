@@ -6,13 +6,26 @@ struct OverlayView: View {
     let client: OllamaClient
     var onDismiss: () -> Void
 
+    @State private var showingSettings: Bool = false
+
     var body: some View {
-        ConversationView(
-            conversation: conversation,
-            settings: settings,
-            client: client,
-            onDismiss: onDismiss
-        )
+        Group {
+            if showingSettings {
+                SettingsView(
+                    settings: settings,
+                    client: client,
+                    onClose: { showingSettings = false }
+                )
+            } else {
+                ConversationView(
+                    conversation: conversation,
+                    settings: settings,
+                    client: client,
+                    onDismiss: onDismiss,
+                    onShowSettings: { showingSettings = true }
+                )
+            }
+        }
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
