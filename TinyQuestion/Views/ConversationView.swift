@@ -53,21 +53,28 @@ struct ConversationView: View {
     }
 
     private var inputBar: some View {
-        HStack(spacing: 8) {
-            TextField("Ask…", text: $input)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .focused($inputFocused)
-                .onSubmit(submit)
-                .submitLabel(.send)
-                .disabled(conversation.isStreaming)
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                TextField("Ask…", text: $input)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14))
+                    .focused($inputFocused)
+                    .onSubmit(submit)
+                    .submitLabel(.send)
+                    .disabled(conversation.isStreaming)
 
-            if conversation.isStreaming {
-                ProgressView().controlSize(.small)
+                if conversation.isStreaming {
+                    ProgressView().controlSize(.small)
+                }
+            }
+
+            HStack {
+                Spacer()
+                ModelPickerView(settings: settings, client: client)
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background(.ultraThickMaterial)
         .overlay(
             Rectangle()
