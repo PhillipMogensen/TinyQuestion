@@ -32,7 +32,8 @@ struct OverlayView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(.white.opacity(0.12), lineWidth: 1)
         )
-        .padding(10)
+        .shadow(color: .black.opacity(0.35), radius: 14, x: 0, y: 6)
+        .padding(14)
         .frame(width: 540)
     }
 }

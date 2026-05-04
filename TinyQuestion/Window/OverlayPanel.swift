@@ -17,9 +17,13 @@ final class OverlayPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
+        titlebarSeparatorStyle = .none
         isMovableByWindowBackground = true
         backgroundColor = .clear
-        hasShadow = true
+        // SwiftUI draws the rounded shape's shadow itself (see OverlayView).
+        // The panel's own rectangular shadow would peek above the rounded
+        // content because of the SwiftUI padding around the rounded shape.
+        hasShadow = false
 
         // Hide the traffic-light controls — design has no window chrome,
         // but we keep `.titled` in the style mask so the panel becomes a
