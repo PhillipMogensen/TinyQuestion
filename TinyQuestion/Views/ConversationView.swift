@@ -96,13 +96,11 @@ struct ConversationView: View {
         let text = input
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         input = ""
-        Task {
-            await conversation.send(
-                text,
-                model: settings.model,
-                systemPrompt: settings.systemPrompt,
-                client: client
-            )
-        }
+        conversation.send(
+            text,
+            model: settings.model,
+            systemPrompt: settings.systemPrompt,
+            client: client
+        )
     }
 }

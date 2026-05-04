@@ -7,12 +7,17 @@ final class Conversation {
     var messages: [ChatMessage] = []
     var isStreaming: Bool = false
 
+    @ObservationIgnored
+    private var streamingTask: Task<Void, Never>?
+
     func clear() {
+        streamingTask?.cancel()
+        streamingTask = nil
         messages.removeAll()
         isStreaming = false
     }
 
-    func send(_ text: String, model: String, systemPrompt: String, client: OllamaClient) async {
+    func send(_ text: String, model: String, systemPrompt: String, client: OllamaClient) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isStreaming else { return }
 
@@ -30,17 +35,28 @@ final class Conversation {
         messages.append(assistant)
         isStreaming = true
 
-        do {
-            for try await delta in client.streamChat(messages: requestMessages, model: model) {
-                if let idx = messages.firstIndex(where: { $0.id == assistantId }) {
-                    messages[idx].content += delta
+        streamingTask = Task { @MainActor [weak self] in
+            defer {
+                self?.isStreaming = false
+                self?.streamingTask = nil
+            }
+            do {
+                for try await delta in client.streamChat(messages: requestMessages, model: model) {
+                    try Task.checkCancellation()
+                    guard let self else { return }
+                    if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
+                        self.messages[idx].content += delta
+                    }
+                }
+            } catch is CancellationError {
+                // User dismissed mid-stream; nothing to display.
+                return
+            } catch {
+                guard let self else { return }
+                if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
+                    self.messages[idx].content = "⚠️ \(error.localizedDescription)"
                 }
             }
-        } catch {
-            if let idx = messages.firstIndex(where: { $0.id == assistantId }) {
-                messages[idx].content = "⚠️ \(error.localizedDescription)"
-            }
         }
-        isStreaming = false
     }
 }
