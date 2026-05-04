@@ -40,16 +40,22 @@ TinyQuestion/
   TinyQuestionApp.swift     # @main entry — manual NSApplication.run() loop
   AppDelegate.swift         # Owns panel, hotkey manager, observation tracking for hotkey rebind
   Window/
-    OverlayPanel.swift      # NSPanel subclass: nonactivating, floating, hidesOnDeactivate=false
+    OverlayPanel.swift      # NSPanel subclass: nonactivating, floating, hidesOnDeactivate=false.
+                            # Hosts SwiftUI via NSHostingController + .preferredContentSize so
+                            # the window auto-sizes to content. Traffic lights hidden manually.
     HotkeyManager.swift     # Wraps HotKey package; takes carbon keycode + modifiers
   Views/
-    OverlayView.swift       # Root SwiftUI view; toggles between Conversation and Settings
-    ConversationView.swift  # Message list + input + model picker; ⌘, → settings, Esc → dismiss
-    MessageView.swift       # One bubble; user = plain Text, assistant = MarkdownContent
+    OverlayView.swift       # Root SwiftUI view; toggles between Conversation and Settings.
+                            # Pins width to 540pt (height tracks content via the host controller).
+    ConversationView.swift  # Input + status bar pinned at top; newest-first turn scroll below.
+                            # Houses InputBar / StatusBar / TurnView as fileprivate sub-views.
+                            # ⌘, → settings, Esc → dismiss; refocuses input when stream ends.
     MarkdownContent.swift   # Splits on ``` fences; AttributedString for inline; styled blocks for code
-    ModelPickerView.swift   # Inline Menu of installed models; calls /api/tags
-    SettingsView.swift      # System prompt + model + hotkey; Esc → back to chat
-    HotkeyCaptureView.swift # NSEvent local monitor for keyDown; requires a modifier
+    ModelPickerView.swift   # Menu of installed models w/ Style.{statusBar,settingsRow}; reachability dot.
+    SettingsView.swift      # System prompt + model + hotkey; Esc-to-close via NSEvent monitor.
+    HotkeyCaptureView.swift # NSEvent local monitor for keyDown; requires a modifier.
+                            # Renders chord as discrete chips; static `format`/`chips` helpers
+                            # reused by ConversationView's status-bar hotkey hint.
   Services/
     OllamaClient.swift      # listModels (/api/tags), streamChat (/api/chat, NDJSON via URLSession.bytes)
     AppSettings.swift       # @Observable, UserDefaults-backed (NOT named `Settings` — see Gotchas)
@@ -73,13 +79,15 @@ project.yml                 # xcodegen spec — source of truth
 - `Conversation` is created once in `AppDelegate` and lives for the app lifetime; `clear()` resets it but the instance stays.
 - `AppSettings` likewise — read once at launch, persisted writes go through `didSet`.
 - `OllamaClient` is a value type, instantiated once.
-- The `OverlayPanel`'s `NSHostingView` holds the SwiftUI tree; `OverlayView` receives those three as `@Bindable` / `let`.
+- The `OverlayPanel`'s `NSHostingController` holds the SwiftUI tree; `OverlayView` receives those three as `@Bindable` / `let`. The controller's `sizingOptions = [.preferredContentSize]` makes the window auto-resize to fit content.
 
 ## Key invariants — don't break these
 
 - **`LSUIElement = true`** in `project.yml`. The app must never appear in Dock or app switcher.
 - **No SwiftUI App protocol.** `@main` is on `TinyQuestionMain` (a `struct` with `static func main()`) which calls `NSApplication.shared.run()` directly. Do not switch to `App { ... Settings { ... } }` — that auto-binds ⌘, to a separate Settings window and breaks the in-overlay settings (see Gotchas).
 - **Panel is non-activating.** `OverlayPanel.styleMask` includes `.nonactivatingPanel`; `hidesOnDeactivate = false`; `level = .floating`. Survives ⌘-Tab.
+- **Keep `.titled` in the panel styleMask.** Even though the design has no chrome, `.titled` is required for the panel to become a proper key window — without it `.onSubmit` on the TextField (and other responder-chain key events) silently stop firing. Hide the traffic-light buttons via `standardWindowButton(.closeButton/.miniaturizeButton/.zoomButton)?.isHidden = true` instead.
+- **Panel auto-sizes via the hosting controller.** `OverlayPanel` uses `NSHostingController` with `sizingOptions = [.preferredContentSize]`; the window grows/shrinks to whatever the SwiftUI content reports. `OverlayView` therefore needs `.frame(width: 540)` to give the content a finite width — without it the controller can't compute a preferred size.
 - **Conversation is ephemeral.** No persistence layer. `clear()` must remain truly destructive. Don't add a history file without re-discussing scope.
 - **xcodegen is source of truth.** Don't hand-edit `TinyQuestion.xcodeproj`; if you add a Swift file, run `xcodegen generate` before building.
 - **Sandbox is OFF** (`ENABLE_APP_SANDBOX: NO`) so we can hit `localhost:11434`. If you ever turn it on, add `com.apple.security.network.client` entitlement.
@@ -115,6 +123,8 @@ Edit `OllamaClient.ChatRequest` (the private `Encodable` struct). If user-tunabl
 - **Streaming task lifetime.** `Conversation.streamingTask` is `@ObservationIgnored` to avoid spurious view re-renders on task assignment. Keep it that way.
 - **Markdown parsing during streaming.** `MarkdownContent.parse` flushes an unclosed ``` fence as a code block, so partial fences mid-stream still render. Don't "fix" this to be strict.
 - **First launch with Ollama down** — model picker shows "Ollama unreachable" and the persisted default (`phi4-mini:latest`) is sent on submit, which surfaces a friendly inline error. Don't add a startup blocker; the app should still launch.
+- **`.onKeyPress` requires a focused descendant.** Works in `ConversationView` because the TextField auto-focuses; doesn't work in `SettingsView` because nothing auto-focuses there (TextEditor focuses only on click). `SettingsView` therefore handles Esc via an `NSEvent.addLocalMonitorForEvents` installed on appear and removed on disappear. Use the same pattern for any other view that needs key handling without a guaranteed focused control.
+- **Refocus the input after streaming.** `ConversationView` watches `conversation.isStreaming` and re-sets `@FocusState` to true when it flips false — `.disabled(isStreaming)` on the TextField resigns first responder when a request starts, so without this you lose focus until you click back into the input.
 
 ## Out of scope (don't add without re-brainstorming)
 
